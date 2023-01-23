@@ -1,8 +1,8 @@
-# DJI Thermal SDK Docker image
+# DJI Thermal SDK Docker image (Output TIFF Version)
 
-![](https://img.shields.io/badge/version-v1.4-red.svg)
+This solution utilizes the [Dockerized DJI Thermal SDK](https://github.com/daz/dji-thermal-sdk-docker) developed by [Darren Jeacocke](https://github.com/daz), but includes the additional feature of converting the output to TIFF files and preserving all metadata using [Exiftool by Phil Harvey](https://exiftool.org/).
 
-Dockerized [DJI Thermal SDK](https://www.dji.com/downloads/softwares/dji-thermal-sdk), which includes example tools for processing and measuring some DJI thermal images.
+We have added an example tool for processing and analyzing DJI thermal images. We share three images taken with a drone DJI Matrice 300 RTK + Thermal Camera H20T.
 
 ## Installation
 
@@ -18,54 +18,18 @@ docker run -i \
   dji_irp --help
 ```
 
-## Process an image to psuedocolor
+## Example of Use
+
+### Measure temperature (raw float32 thermal) on all images in the current directory, converting to TIFF and copying exif metadata from the original file
+
+Copy and paste this command in your bash terminal after intall and build the "djithermal" docker image.
 
 ```sh
 docker run -i \
   -v "$(pwd)":"$(pwd)" -w "$(pwd)" \
   djithermal \
-  dji_irp -a process \
-    --palette iron_red \
-    --colorbar on,40,25 \
-    --source /app/djithermal/dataset/M30T/DJI_0001_R.JPG \
-    --output process.rgb
-convert -depth 8 -size 640x512 RGB:process.rgb process.jpg
-```
-
-## Extract a raw float32 thermal
-
-```sh
-docker run -i \
-  -v "$(pwd)":"$(pwd)" -w "$(pwd)" \
-  djithermal \
-  dji_irp -a measure \
-    --measurefmt float32 \
-    --distance 25 \
-    --humidity 77 \
-    --emissivity 0.98 \
-    --reflection 23 \
-    --source DJI_0001_R.JPG \
-    --output measure.raw
-```
-
-## Process all images in the current directory, copying exif metadata from the original file
-
-```sh
-docker run -i \
-  -v "$(pwd)":"$(pwd)" -w "$(pwd)" \
-  djithermal \
-  /bin/sh -c 'mkdir -p process && mkdir -p raw
-  for i in *.JPG; do
-    dji_irp -a process \
-      --palette iron_red \
-      --colorbar on,44,0 \
-      --source "$i" \
-      --output "$(pwd)/process/$(basename $i .JPG).rgb"
-    convert -depth 8 -size 640x512 \
-      RGB:"$(pwd)/process/$(basename $i .JPG).rgb" \
-      "$(pwd)/process/$(basename $i)"
-    rm "$(pwd)/process/$(basename $i .JPG).rgb"
-    exiftool -overwrite_original -TagsFromFile "$i" -all:all "$(pwd)/process/$(basename $i)"
+  /bin/sh -c 'mkdir -p raw tif 
+  for i in *.JPG; do    
     dji_irp -a measure \
       --measurefmt float32 \
       --distance 25 \
@@ -74,5 +38,11 @@ docker run -i \
       --reflection 23 \
       --source "$i" \
       --output "$(pwd)/raw/$(basename $i .JPG).raw"
-  done'
+    raw2tiff -L -w 640 -l 512 -d float -c none -r 128 "$(pwd)/raw/$(basename $i .JPG).raw" "$(pwd)/tif/$(basename $i .JPG).tiff"
+    exiftool -overwrite_original -TagsFromFile "$i" -all:all -xmp:xmp "$(pwd)/tif/$(basename $i .JPG).tiff"
+    rm "$(pwd)/raw/$(basename $i .JPG).raw"
+  done
+  rm -r raw'
 ```
+
+This command will create a "tif" folder where the output of TIFF files will be saved
