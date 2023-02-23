@@ -10,6 +10,13 @@ We have added an example tool for processing and analyzing DJI thermal images. W
 docker build -t djithermal .                        
 ```
 
+Note that you need to use the [BuildKit frontend](https://docs.docker.com/build/buildkit/) for Docker. If it is not enabled by default for you, you probably can enable it by running 
+
+```sh
+DOCKER_BUILDKIT=1 docker build -t djithermal . 
+```
+
+
 ## Commands
 
 ```sh
